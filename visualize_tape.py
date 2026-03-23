@@ -29,8 +29,9 @@ def plot_real_market():
     plt.legend()
     plt.grid(True, alpha=0.2)
     
-    print("📈 Gráfico generado. Cerralo para continuar.")
-    plt.show()
+    plt.savefig('heatmap_ggal.png') # Crea una foto que podés tener abierta
+    print("📸 Imagen 'heatmap_ggal.png' actualizada.")
+    plt.close() # Cierra el gráfico internamente para no consumir memoria
 
 if __name__ == "__main__":
     plot_real_market()
