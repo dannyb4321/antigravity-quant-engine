@@ -1,47 +1,36 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 
-def create_whale_chart(csv_file='cinta_ggal.csv'):
-    # 1. Cargamos los datos
-    df = pd.read_csv(csv_file)
-    
-    # Convertimos la columna Time a formato de tiempo real para graficar
-    df['Time'] = pd.to_datetime(df['Time'], format='%H:%M:%S')
+def plot_real_market():
+    try:
+        df = pd.read_csv('cinta_ggal.csv')
+    except FileNotFoundError:
+        print("❌ No hay datos. Corré primero get_real_data.py")
+        return
 
-    # 2. Separamos los datos para graficar con estilos diferentes
-    whales = df[df['Is_Whale'] == True]
-    retail = df[df['Is_Whale'] == False]
-
-    # 3. Configuramos el gráfico
     plt.figure(figsize=(12, 6))
-    plt.style.use('seaborn-v0_8-darkgrid') # Le da un toque profesional
-
-    # Graficamos a los minoristas (puntos grises, pequeños y transparentes)
-    plt.scatter(retail['Time'], retail['Price'], 
-                s=retail['Volume']/10, # Usamos TAMAÑO para volumen (dividido para que no tape)
-                color='gray', alpha=0.4, label='Minoristas (Ruido)')
-
-    # --- ACÁ APLICAMOS TU IDEA ---
-    # Graficamos a las ballenas (puntos rojos, GRANDES y visibles)
-    plt.scatter(whales['Time'], whales['Price'], 
-                s=whales['Volume']/5, # Mucho más grandes
-                color='red', alpha=0.9, edgecolors='black', label='Ballena (Bloque ~70k USD)')
-
-    # 4. Formateamos los ejes (para que se vean las horas bien)
-    ax = plt.gca()
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     
-    plt.title('Detección Visual de Ballenas en GGAL (Simulación)')
-    plt.xlabel('Tiempo (Hora de la Rueda)')
-    plt.ylabel('Precio (USD)')
-    plt.legend()
-    plt.tight_layout()
+    # 1. Graficamos el precio (línea azul)
+    plt.plot(df.index, df['Price'], color='blue', alpha=0.3, label='Precio GGAL (Minutos)')
+    
+    # 2. Resaltamos las Compras (Verde) y Ventas (Rojo)
+    buys = df[df['Side'] == 'Buy']
+    sells = df[df['Side'] == 'Sell']
+    
+    plt.scatter(buys.index, buys['Price'], color='green', s=buys['Volume']/500, label='Compras Agresivas', alpha=0.6)
+    plt.scatter(sells.index, sells['Price'], color='red', s=sells['Volume']/500, label='Ventas Agresivas', alpha=0.6)
 
-    # Guardamos el gráfico
-    output_image = 'whale_visualization.png'
-    plt.savefig(output_image)
-    print(f"✅ Visualización guardada con éxito como '{output_image}'")
+    # 3. Marcamos la "MURALLA" de la ballena ($44.65)
+    plt.axhline(y=44.65, color='purple', linestyle='--', linewidth=2, label='SOPORTE BALLENA ($44.65)')
+
+    plt.title("📊 GGAL - Mapa de Liquidez en Wall Street (Real Time)")
+    plt.xlabel("Minutos de la rueda")
+    plt.ylabel("Precio USD")
+    plt.legend()
+    plt.grid(True, alpha=0.2)
+    
+    print("📈 Gráfico generado. Cerralo para continuar.")
+    plt.show()
 
 if __name__ == "__main__":
-    create_whale_chart()
+    plot_real_market()
