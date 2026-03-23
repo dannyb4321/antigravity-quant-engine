@@ -1,31 +1,38 @@
 import pandas as pd
 
 def analyze_aggression(csv_file='cinta_ggal.csv'):
-    df = pd.read_csv(csv_file)
-    
-    # 1. Agresividad por bando
-    aggression = df.groupby('Side').agg(
-        Total_Vol=('Volume', 'sum'),
-        Trades=('Volume', 'count')
-    ).reset_index()
+    try:
+        # Cargamos el archivo que generamos o descargamos
+        df = pd.read_csv(csv_file)
+    except FileNotFoundError:
+        print(f"❌ Error: No se encontró {csv_file}")
+        return
 
-    # 2. Buscamos el nivel de mayor absorción (Nombres corregidos aquí)
-    vap = df.groupby('Price').agg(Total_Vol=('Volume', 'sum')).reset_index()
-    iceberg_level = vap.loc[vap['Total_Vol'].idxmax()]
+    # 1. Calculamos volúmenes totales de forma directa y segura
+    buy_vol = df[df['Side'] == 'Buy']['Volume'].sum()
+    sell_vol = df[df['Side'] == 'Sell']['Volume'].sum()
+    
+    # 2. Buscamos el precio con más volumen (Punto de mayor absorción)
+    vap = df.groupby('Price')['Volume'].sum().reset_index()
+    iceberg_level = vap.loc[vap['Volume'].idxmax()]
 
     print("📊 REPORTE DE INTELIGENCIA - GGAL")
     print("-" * 45)
-    
-    for _, row in aggression.iterrows():
-        print(f"🥊 Lado {row['Side']}: {int(row['Total_Vol'])} acciones.")
+    print(f"🥊 Volumen de Compra Agresiva: {int(buy_vol)} acciones")
+    print(f"🥊 Volumen de Venta Agresiva: {int(sell_vol)} acciones")
 
-    # 3. Cálculo del Delta
-    buy_vol = aggression.loc[aggression['Side'] == 'Buy', 'Total_Vol'].values
-    sell_vol = aggression.loc[aggression['Side'] == 'Sell', 'Total_Vol'].values
+    # 3. Cálculo del Delta (La diferencia de poder)
     delta = buy_vol - sell_vol
-    
     print(f"\n📈 DELTA TOTAL: {int(delta)} acciones")
-    print(f"🛡️ SOPORTE CLAVE (MAYOR VOLUMEN): ${iceberg_level['Price']}")
+    
+    if delta > 0:
+        print("🔥 Sentimiento: COMPRADORES AL MANDO.")
+    elif delta < 0:
+        print("❄️ Sentimiento: VENDEDORES AL MANDO.")
+    else:
+        print("⚖️ Sentimiento: MERCADO EN EQUILIBRIO.")
+
+    print(f"🛡️ SOPORTE CLAVE (MAYOR ABSORCIÓN): ${iceberg_level['Price']}")
     print("-" * 45)
 
 if __name__ == "__main__":
