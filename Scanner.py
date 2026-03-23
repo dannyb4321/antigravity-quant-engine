@@ -1,34 +1,30 @@
 import pandas as pd
 
-def run_whale_scanner(csv_file='cinta_ggal.csv', vol_threshold=1500, count_threshold=5):
-    # 1. Cargamos la cinta
+def detect_icebergs(csv_file='cinta_ggal.csv', vol_threshold=10000):
     df = pd.read_csv(csv_file)
-    
-    # 2. Calculamos el valor nominal de cada operación (Precio * Volumen)
     df['Amount_USD'] = df['Price'] * df['Volume']
     
-    # 3. Filtramos los bloques grandes
-    large_trades = df[df['Volume'] >= vol_threshold]
-    
-    # 4. Agrupamos por precio para encontrar la "pared"
-    summary = large_trades.groupby('Price').agg(
-        Repeticiones=('Volume', 'count'),
-        Total_USD=('Amount_USD', 'sum')
+    # Agrupamos por precio para ver el volumen TOTAL en cada nivel
+    vap = df.groupby('Price').agg(
+        Total_Volume=('Volume', 'sum'),
+        Total_USD=('Amount_USD', 'sum'),
+        Trades=('Volume', 'count')
     ).reset_index()
 
-    # 5. Filtramos por tu regla de "X" veces (5 veces)
-    whale_levels = summary[summary['Repeticiones'] >= count_threshold]
+    # Definimos que un Iceberg es donde el Volumen Total es enorme (ej > 10.000 acciones)
+    icebergs = vap[vap['Total_Volume'] >= vol_threshold]
 
-    print("🔍 ESCANEANDO NIVELES DE ALTA LIQUIDEZ INSTITUCIONAL...")
+    print("🧊 BUSCANDO ÓRDENES ICEBERG ESCONDIDAS...")
     
-    if not whale_levels.empty:
-        for _, row in whale_levels.iterrows():
-            print(f"\n🚨 ¡BALLENA DETECTADA EN ${row['Price']}! 🚨")
-            print(f"📊 Bloques detectados: {int(row['Repeticiones'])}")
-            print(f"💰 CAPITAL EN JUEGO: USD ${row['Total_USD']:,.2f}")
-            print(f"🛡️ Fortaleza: Este nivel es un SOPORTE sólido.")
+    if not icebergs.empty:
+        for _, row in icebergs.iterrows():
+            print(f"\n❄️ ¡ICEBERG DETECTADO EN ${row['Price']}!")
+            print(f"📊 Volumen Absorbido: {int(row['Total_Volume'])} acciones")
+            print(f"🔄 Cantidad de Trades: {row['Trades']} (Puntas de iceberg)")
+            print(f"💰 Capital Total: USD ${row['Total_USD']:,.2f}")
     else:
-        print("✅ No se detectan patrones de acumulación masiva aún.")
+        print("🌊 El mar está tranquilo. No hay hielos a la vista.")
 
 if __name__ == "__main__":
-    run_whale_scanner()
+    # Bajamos el umbral para que detecte lo que generamos en nuestra simulación
+    detect_icebergs(vol_threshold=5000)
