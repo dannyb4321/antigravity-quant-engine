@@ -1,42 +1,47 @@
 import time
 import subprocess
-import os
+from datetime import datetime
 
-# Danny: Definimos los nombres de los archivos para evitar errores
-DATA_SCRIPT = "get_real_data.py"
-SCANNER_SCRIPT = "Scanner.py"
-GRAPH_SCRIPT = "visualize_tape.py"
+def es_horario_mercado():
+    # Obtenemos la hora actual (Argentina)
+    ahora = datetime.now()
+    hora = ahora.hour
+    minuto = ahora.minute
+    dia_semana = ahora.weekday() # 0 es Lunes, 6 es Domingo
+
+    # 1. ¿Es fin de semana? (Sábado=5 o Domingo=6)
+    if dia_semana > 4:
+        return False, "Es fin de semana. El mercado está cerrado."
+
+    # 2. ¿Está dentro del rango operativo? (De 10:30 a 17:30 ART para cubrir el cierre)
+    # Ajustamos a las 18:00 para que capture el post-market inicial si querés.
+    if hora < 10 or hora >= 18:
+        return False, "Mercado cerrado. El motor retomará mañana a las 10:00."
+
+    return True, "Mercado abierto. Operando..."
 
 def run_engine():
-    current_time = time.strftime('%H:%M:%S')
-    print(f"\n🚀 {current_time} - INICIANDO CICLO DE ACTUALIZACIÓN QUANTS...")
+    mercado_activo, mensaje_estado = es_horario_mercado()
+    
+    if not mercado_activo:
+        print(f"\n💤 {time.strftime('%H:%M:%S')} - {mensaje_estado}")
+        return
+
+    print(f"\n🚀 {time.strftime('%H:%M:%S')} - INICIANDO CICLO DE ACTUALIZACIÓN...")
     print("-" * 50)
 
     try:
-        # 1. Bajamos la data de Wall Street
-        print(f"📥 Paso 1: Ejecutando {DATA_SCRIPT}...")
-        subprocess.run(["python", DATA_SCRIPT], check=True)
-
-        # 2. Actualizamos el gráfico (Heatmap) -> ¡IMPORTANTE: AHORA VA SEGUNDO!
-        # Así la foto 'heatmap_ggal.png' está lista antes de escanear.
-        print(f"📊 Paso 2: Ejecutando {GRAPH_SCRIPT}...")
-        subprocess.run(["python", GRAPH_SCRIPT], check=True)
-
-        # 3. Corremos el Scanner para detectar ballenas y enviar alertas con foto
-        print(f"🔍 Paso 3: Ejecutando {SCANNER_SCRIPT}...")
-        subprocess.run(["python", SCANNER_SCRIPT], check=True)
-
+        subprocess.run(["python", "get_real_data.py"], check=True)
+        subprocess.run(["python", "visualize_tape.py"], check=True)
+        subprocess.run(["python", "Scanner.py"], check=True)
         print("-" * 50)
-        print(f"✅ CICLO COMPLETADO CON ÉXITO.")
-        print("⏳ Próxima actualización en 5 minutos. No cierres esta ventana.")
-
-    except subprocess.CalledProcessError as e:
-        print(f"⚠️ Error al ejecutar un script: {e}")
+        print(f"✅ CICLO COMPLETADO.")
     except Exception as e:
-        print(f"⚠️ Hubo un error inesperado: {e}")
+        print(f"⚠️ Error: {e}")
 
 if __name__ == "__main__":
-    print("🤖 MODO AUTOPILOTO ACTIVADO - GGAL ANTI-GRAVITY ENGINE")
+    print("🤖 MODO AUTOPILOTO CON HORARIO INTELIGENTE - GGAL")
     while True:
         run_engine()
-        time.sleep(300) # Espera 5 minutos
+        # Espera 5 minutos para el próximo check
+        time.sleep(300)
