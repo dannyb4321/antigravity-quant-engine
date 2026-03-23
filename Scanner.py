@@ -1,30 +1,41 @@
 import pandas as pd
 
-def detect_icebergs(csv_file='cinta_ggal.csv', vol_threshold=10000):
+def analyze_aggression(csv_file='cinta_ggal.csv'):
+    # 1. Cargamos los datos de la cinta
     df = pd.read_csv(csv_file)
-    df['Amount_USD'] = df['Price'] * df['Volume']
     
-    # Agrupamos por precio para ver el volumen TOTAL en cada nivel
-    vap = df.groupby('Price').agg(
-        Total_Volume=('Volume', 'sum'),
-        Total_USD=('Amount_USD', 'sum'),
+    # 2. Calculamos el volumen por bando (Agresividad)
+    # Agrupamos por 'Side' (Buy/Sell) para ver quién golpeó más fuerte
+    aggression = df.groupby('Side').agg(
+        Total_Vol=('Volume', 'sum'),
+        Avg_Price=('Price', 'mean'),
         Trades=('Volume', 'count')
     ).reset_index()
 
-    # Definimos que un Iceberg es donde el Volumen Total es enorme (ej > 10.000 acciones)
-    icebergs = vap[vap['Total_Volume'] >= vol_threshold]
+    # 3. Buscamos el nivel de mayor absorción (donde hubo más volumen total)
+    vap = df.groupby('Price').agg(Total_Vol=('Volume', 'sum')).reset_index()
+    iceberg_level = vap.loc[vap['Total_Volume'].idxmax()]
 
-    print("🧊 BUSCANDO ÓRDENES ICEBERG ESCONDIDAS...")
+    print("📊 REPORTE DE INTELIGENCIA DE MERCADO - GGAL")
+    print("-" * 45)
     
-    if not icebergs.empty:
-        for _, row in icebergs.iterrows():
-            print(f"\n❄️ ¡ICEBERG DETECTADO EN ${row['Price']}!")
-            print(f"📊 Volumen Absorbido: {int(row['Total_Volume'])} acciones")
-            print(f"🔄 Cantidad de Trades: {row['Trades']} (Puntas de iceberg)")
-            print(f"💰 Capital Total: USD ${row['Total_USD']:,.2f}")
+    for _, row in aggression.iterrows():
+        print(f"🥊 Lado {row['Side']}: {int(row['Total_Vol'])} acciones en {row['Trades']} ataques.")
+
+    # 4. Cálculo del Delta (Diferencia entre compras y ventas agresivas)
+    buy_vol = aggression.loc[aggression['Side'] == 'Buy', 'Total_Vol'].values
+    sell_vol = aggression.loc[aggression['Side'] == 'Sell', 'Total_Vol'].values
+    
+    delta = buy_vol - sell_vol
+    print(f"\n📈 DELTA TOTAL: {int(delta)} acciones")
+    
+    if delta > 0:
+        print("🔥 Sentimiento: COMPRADORES AGRESIVOS dominando el campo.")
     else:
-        print("🌊 El mar está tranquilo. No hay hielos a la vista.")
+        print("❄️ Sentimiento: VENDEDORES AGRESIVOS presionando el precio.")
+
+    print(f"\n🛡️ NIVEL DE MAYOR ABSORCIÓN: ${iceberg_level['Price']}")
+    print("-" * 45)
 
 if __name__ == "__main__":
-    # Bajamos el umbral para que detecte lo que generamos en nuestra simulación
-    detect_icebergs(vol_threshold=5000)
+    analyze_aggression()
