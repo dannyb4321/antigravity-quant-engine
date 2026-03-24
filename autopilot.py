@@ -37,3 +37,16 @@ if __name__ == "__main__":
             print(f"💤 {datetime.now().strftime('%H:%M:%S')} - Fuera de horario.")
         
         time.sleep(300)
+        # ... (Mantené el resto de autopilot.py igual) ...
+
+        if es_horario_mercado():
+            print(f"🚀 {datetime.now().strftime('%H:%M:%S')} - Ciclo activo")
+            subprocess.run(["python", "get_real_data.py"])
+            subprocess.run(["python", "visualize_tape.py"])
+            
+            # --- AGREGÁ ESTA LÍNEA ACÁ ---
+            print("📊 Ejecutando Scanner Técnico...")
+            subprocess.run(["python", "TechnicalScanner.py"]) # Tu nueva alerta técnica
+
+            # (Lógica de apertura y scanner de ballenas normal...)
+            # ...
