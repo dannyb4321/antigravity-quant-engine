@@ -13,18 +13,18 @@ def analyze_aggression(es_apertura=False):
         delta = int(buy_vol - sell_vol)
         price = df['Price'].iloc[-1]
 
-        print(f"🐋 WHALE SCAN: Delta actual {delta}")
+        print(f"🐋 WHALE SCAN: Delta {delta}")
 
-        # --- RECALIBRADO: 80,000 en lugar de 120,000 ---
+        # --- UMBRAL RECALIBRADO A 80,000 ---
         if abs(delta) > 80000:
             side = "🐂 COMPRA" if delta > 0 else "🐻 VENTA"
-            msg = f"🚨 *BALLENA EN ACCIÓN ({side})*\n\n"
+            msg = f"🚨 *BALLENA DETECTADA ({side})*\n\n"
             msg += f"📊 *Delta:* {delta} acciones\n"
             msg += f"💰 *Precio:* ${price}"
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", 
                           data={'chat_id': CHAT_ID, 'text': msg, 'parse_mode': 'Markdown'})
     except:
-        print("❌ Error leyendo cinta")
+        print("❌ Error de lectura")
 
 if __name__ == "__main__":
     es_apertura = "--apertura" in sys.argv

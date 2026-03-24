@@ -20,7 +20,7 @@ def get_indicators(df):
     return df
 
 def run_technical_scan():
-    print(f"\n🔍 ANALIZANDO 15M Y 1H (ALCISTA/BAJISTA)...")
+    print(f"\n🔍 ANALIZANDO ESCENARIOS 15M Y 1H...")
     try:
         ticker = yf.Ticker("GGAL")
         df_1h = get_indicators(ticker.history(period="1mo", interval="1h"))
@@ -30,24 +30,24 @@ def run_technical_scan():
         bull_1h = df_1h['Close'].iloc[-1] > df_1h['EMA21'].iloc[-1]
         bear_1h = df_1h['Close'].iloc[-1] < df_1h['EMA21'].iloc[-1]
 
-        # --- LÓGICA 15M (Momento) ---
+        # --- LÓGICA 15M (Momento - Histograma) ---
         bull_15m = df_15m['Hist'].iloc[-1] > 0 and df_15m['Hist'].iloc[-1] > df_15m['Hist'].iloc[-2]
         bear_15m = df_15m['Hist'].iloc[-1] < 0 and df_15m['Hist'].iloc[-1] < df_15m['Hist'].iloc[-2]
 
         print(f"📊 [1H: {'🐂' if bull_1h else '🐻'}] | [15m: {'🐂' if bull_15m else '🐻'}]")
 
-        # 🟢 ESCENARIO ALCISTA
+        # 🟢 ALERTA ALCISTA
         if bull_1h and bull_15m:
-            msg = "🚀 *GGAL: ESCENARIO ALCISTA CONFIRMADO*\n\n"
+            msg = "🚀 *GGAL: ALINEACIÓN ALCISTA*\n\n"
             msg += f"✅ *1H:* Tendencia sobre EMA 21\n"
             msg += f"🔥 *15m:* Histograma MACD acelerando al alza\n"
             msg += f"💰 *Precio:* ${df_15m['Close'].iloc[-1]:.2f}"
             send_alert(msg)
 
-        # 🔴 ESCENARIO BAJISTA
+        # 🔴 ALERTA BAJISTA
         elif bear_1h and bear_15m:
-            msg = "⚠️ *GGAL: ESCENARIO BAJISTA DETECTADO*\n\n"
-            msg += f"📉 *1H:* Precio debajo de EMA 21\n"
+            msg = "⚠️ *GGAL: ALINEACIÓN BAJISTA*\n\n"
+            msg += f"📉 *1H:* Tendencia debajo de EMA 21\n"
             msg += f"❄️ *15m:* Histograma MACD hundiéndose\n"
             msg += f"💰 *Precio:* ${df_15m['Close'].iloc[-1]:.2f}"
             send_alert(msg)
