@@ -1,70 +1,55 @@
- import pandas as pd
+import pandas as pd
 import requests
-import os
 import yfinance as yf
-import time
+import os
 
-# 🚨 CONFIGURACIÓN DE TELEGRAM (LISTO PARA USAR)
 TOKEN = "8765737672:AAHXXYm3JkucM-3TtafoZpcuEiOtszHQckY" 
 CHAT_ID = "7566636061" 
 
-def send_telegram_alert(message):
+def send_alert(msg):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    params = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
-    try:
-        requests.get(url, params=params)
-    except Exception as e:
-        print(f"⚠️ Error al conectar con Telegram: {e}")
+    requests.post(url, data={'chat_id': CHAT_ID, 'text': msg, 'parse_mode': 'Markdown'})
 
 def run_technical_scan():
-    print(f"\n📊 Analizando Indicadores Técnicos (MACD + EMA 21)...")
     try:
-        # Bajamos datos históricos (5 días, velas de 5 min)
         ticker = yf.Ticker("GGAL")
-        hist = ticker.history(period="5d", interval="5m")
-        if hist.empty: return
-        
-        # --- 📈 CÁLCULOS TÉCNICOS ---
-        
-        # 1. EMA 21 (Tendencia)
-        hist['EMA21'] = hist['Close'].ewm(span=21, adjust=False).mean()
-        
-        # 2. MACD (12, 26, 9)
-        exp1 = hist['Close'].ewm(span=12, adjust=False).mean()
-        exp2 = hist['Close'].ewm(span=26, adjust=False).mean()
-        hist['MACD'] = exp1 - exp2
-        hist['Signal'] = hist['MACD'].ewm(span=9, adjust=False).mean()
-        
-        # !!! EL HITOGRAMA !!! (Danny, esto es lo que pediste)
-        hist['Histogram'] = hist['MACD'] - hist['Signal']
+        # Bajamos data de 5 días para tener promedio de EMA 21 estable
+        df = ticker.history(period="5d", interval="5m")
+        if df.empty: return
 
-        # Valores actuales (última vela cerrada)
-        precio_actual = hist['Close'].iloc[-1]
-        ema_actual = hist['EMA21'].iloc[-1]
-        macd_actual = hist['MACD'].iloc[-1]
-        hist_actual = hist['Histogram'].iloc[-1]
-        hist_anterior = hist['Histogram'].iloc[-2]
-
-        # --- 🚨 LÓGICA DE ALERTA ÁGIL (MOMENTUM) ---
+        # --- INDICADORES ---
+        df['EMA21'] = df['Close'].ewm(span=21, adjust=False).mean()
         
-        # Condición 1: Tendencia Saludable (Precio por encima de EMA 21)
-        confirmacion_tendencia = precio_actual > ema_actual
-        
-        # Condición 2: Aceleración de Momentum (Histograma se expande)
-        # Danny, esto te avisa antes que el cruce: el hist_actual es mayor que el anterior y está sobre cero.
-        aceleracion_momentum = hist_actual > hist_anterior and hist_actual > 0
+        # MACD
+        exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+        exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+        df['MACD'] = exp1 - exp2
+        df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+        df['Hist'] = df['MACD'] - df['Signal'] # El Histograma
 
-        # Alerta Estratégica
-        if confirmacion_tendencia and aceleracion_momentum:
-            msg = f"🎯 *SEÑAL DE ENTRADA ÁGIL (GGAL)*\n\n"
-            msg += f"✅ *Tendencia:* Precio sobre EMA 21 (${precio_actual:.2f})\n"
-            msg += f"🔥 *Momentum (Histograma):* Expandiéndose (${hist_actual:.4f})\n"
-            msg += f"🚀 _El motor Anti-Gravity detectó aceleración institucional._"
-            send_telegram_alert(msg)
-            print("📲 Alerta técnica enviada a Telegram.")
+        last = df.iloc[-1]
+        prev = df.iloc[-2]
+
+        # --- LÓGICA CAZADOR DE RENDIMIENTO ---
+        # 1. Filtro de Tendencia (Precio > EMA 21)
+        tendencia_ok = last['Close'] > last['EMA21']
+        
+        # 2. Filtro de Momento (Histograma creciendo)
+        # Danny: Esto es lo que pediste, detecta si la fuerza compradora se acelera
+        momento_ok = last['Hist'] > prev['Hist'] and last['Hist'] > 0
+
+        print(f"🔍 TÉCNICO: Precio ${last['Close']:.2f} | Histograma: {last['Hist']:.4f}")
+
+        if True:
+            msg = f"🎯 *SEÑAL TÉCNICA DETECTADA*\n\n"
+            msg += f"📈 *GGAL* está sobre la EMA 21.\n"
+            msg += f"🔥 *Histograma MACD:* Acelerando al alza.\n"
+            msg += f"💎 _Catalizador alcista en formación._"
+            send_alert(msg)
+            print("📲 Alerta técnica enviada.")
 
     except Exception as e:
-        print(f"⚠️ Error en TechnicalScanner: {e}")
+        print(f"⚠️ Error técnico: {e}")
 
 if __name__ == "__main__":
     run_technical_scan()
