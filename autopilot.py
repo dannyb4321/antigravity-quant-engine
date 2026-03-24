@@ -50,3 +50,9 @@ if __name__ == "__main__":
 
             # (Lógica de apertura y scanner de ballenas normal...)
             # ...
+            # ... dentro del bucle while True, si el mercado está abierto:
+subprocess.run(["python", "get_real_data.py"])
+subprocess.run(["python", "visualize_tape.py"])
+subprocess.run(["python", "Scanner.py"])          # Ballenas (Volumen)
+subprocess.run(["python", "TechnicalScanner.py"]) # MACD + EMA (Tendencia)
+subprocess.run(["python", "ATRScanner.py"])       # NUEVO: Volatilidad (Riesgo)
