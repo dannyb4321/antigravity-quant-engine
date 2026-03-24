@@ -3,50 +3,51 @@ import requests
 import sys
 import os
 from datetime import datetime
+from SignalValidator import get_signal_score # Importamos el validador
 
 TOKEN = "8765737672:AAHXXYm3JkucM-3TtafoZpcuEiOtszHQckY" 
 CHAT_ID = "7566636061" 
-LOG_FILE = "whale_alerts_history.csv" # Nuestra base de datos simple
+LOG_FILE = "trading_log_ggal.csv"
 
-def log_whale_event(delta, price):
-    """Guarda la alerta en un archivo CSV para análisis posterior."""
-    file_exists = os.path.isfile(LOG_FILE)
-    
-    log_data = {
-        'timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
-        'delta': [delta],
-        'price': [price],
-        'side': ['Buy' if delta > 0 else 'Sell']
+def log_event(delta, price, score):
+    """Guarda la oportunidad en la base de datos CSV."""
+    nuevo = {
+        'Fecha': [datetime.now().strftime('%Y-%m-%d %H:%M')],
+        'Precio': [price],
+        'Delta': [delta],
+        'Score': [score]
     }
-    df_log = pd.DataFrame(log_data)
-    
-    # Guardamos (append) sin borrar lo anterior
-    df_log.to_csv(LOG_FILE, mode='a', index=False, header=not file_exists)
-    print(f"💾 Evento registrado en {LOG_FILE}")
+    df = pd.DataFrame(nuevo)
+    df.to_csv(LOG_FILE, mode='a', header=not os.path.exists(LOG_FILE), index=False)
 
 def analyze_aggression(es_apertura=False):
     try:
         df = pd.read_csv('cinta_ggal.csv')
-        buy_vol = df[df['Side'] == 'Buy']['Volume'].sum()
-        sell_vol = df[df['Side'] == 'Sell']['Volume'].sum()
-        delta = int(buy_vol - sell_vol)
+        delta = int(df[df['Side'] == 'Buy']['Volume'].sum() - df[df['Side'] == 'Sell']['Volume'].sum())
         price = df['Price'].iloc[-1]
 
-        # --- LÓGICA DE ALERTA Y LOG ---
+        # --- SOLO SI HAY BALLENA (>80k) ---
         if abs(delta) > 80000:
-            log_whale_event(delta, price) # Registramos en la base de datos
-            
-            side = "🐂 COMPRA" if delta > 0 else "🐻 VENTA"
-            msg = f"🚨 *BALLENA DETECTADA ({side})*\n\n"
+            score, detalle_texto = get_signal_score()
+            log_event(delta, price, score) # Guardamos en el log profesional
+
+            # Clasificación de Calidad
+            estrellas = "⭐" * score
+            calidad = "BAJA" if score < 3 else "ALTA" if score < 5 else "PREMIUM (A+)"
+
+            msg = f"🚨 *BALLENA DETECTADA + 💎 CALIDAD {score}/5*\n\n"
             msg += f"📊 *Delta:* {delta} acciones\n"
             msg += f"💰 *Precio:* ${price}\n"
-            
-            # Aquí podrías importar y sumar el reporte de RiskManager
+            msg += f"🏆 *Calidad:* {calidad} {estrellas}\n\n"
+            msg += f"*Checklist:*\n{detalle_texto}\n\n"
+            msg += "📝 _Evento registrado en tu base de datos para análisis._"
+
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", 
                           data={'chat_id': CHAT_ID, 'text': msg, 'parse_mode': 'Markdown'})
-    except:
-        print("❌ Error en Whale Scan")
+            print(f"✅ Alerta Unificada enviada (Score: {score})")
+
+    except Exception as e:
+        print(f"⚠️ Error: {e}")
 
 if __name__ == "__main__":
-    es_apertura = "--apertura" in sys.argv
-    analyze_aggression(es_apertura=es_apertura)
+    analyze_aggression("--apertura" in sys.argv)
