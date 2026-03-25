@@ -20,7 +20,7 @@ def analyze_aggression(es_apertura=False):
         # --- UMBRAL RECALIBRADO PARA PRUEBA DE CAMPO ---
         # Danny: Usá este código. Yo ya te puse '1000' acá para que te llegue la foto.
         # Una vez que te llegue el mensaje, volvelo a poner en 80000.
-        if abs(delta) > 80000: 
+        if abs(delta) > 20000: 
             score, detalle, direccion = get_signal_score()
             
             # Clasificación visual
