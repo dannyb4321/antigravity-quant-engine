@@ -20,3 +20,6 @@ def generate_excel_dashboard():
 
 if __name__ == "__main__":
     generate_excel_dashboard()
+# --- PEGÁ ESTO AL FINAL DE TODO EN EXCEL_DASHBOARD.PY ---
+if __name__ == "__main__":
+    generate_excel_dashboard()

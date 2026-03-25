@@ -7,8 +7,8 @@ def get_market_data():
         ticker_adr = yf.Ticker("GGAL")
         ticker_local = yf.Ticker("GGAL.BA")
         
-        df_adr = ticker_adr.history(period="1d", interval="5m")
-        df_local = ticker_local.history(period="1d", interval="5m")
+        df_adr = ticker_adr.history(period="5d", interval="5m")
+        df_local = ticker_local.history(period="5d", interval="5m")
         
         if df_adr.empty or df_local.empty:
             return 0, 0, 65.0 # Tasa fija de seguridad
