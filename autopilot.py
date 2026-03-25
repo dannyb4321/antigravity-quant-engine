@@ -56,3 +56,10 @@ subprocess.run(["python", "visualize_tape.py"])
 subprocess.run(["python", "Scanner.py"])          # Ballenas (Volumen)
 subprocess.run(["python", "TechnicalScanner.py"]) # MACD + EMA (Tendencia)
 subprocess.run(["python", "ATRScanner.py"])       # NUEVO: Volatilidad (Riesgo)
+# ... dentro del bucle while True, cuando el mercado está abierto:
+subprocess.run(["python", "get_real_data.py"])
+subprocess.run(["python", "visualize_tape.py"])
+subprocess.run(["python", "Scanner.py"])
+subprocess.run(["python", "TechnicalScanner.py"])
+# --- AGREGÁ ESTA LÍNEA ---
+subprocess.run(["python", "ExcelDashboard.py"])
