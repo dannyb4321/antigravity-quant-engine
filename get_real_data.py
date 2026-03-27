@@ -33,4 +33,4 @@ def download_real_galicia():
     print("-" * 45)
 
 if __name__ == "__main__":
-    download_real_galicia()
+    download_real_galicia() 
