@@ -75,3 +75,10 @@ class IOL_Client:
 # if __name__ == "__main__":
 #     client = IOL_Client("tu_mail", "tu_pass")
 #     print(client.get_options_data().head())
+# 1. FIX DE CREDENCIALES: Usá las mismas que funcionaron en LiveGreeks
+iol = IOL_Client("paradisecity","Inviertaparaganar.5")
+
+# 2. FIX DE REGEX (Agregamos la 'r' para que no chille la terminal)
+if not df_panel.empty:
+    df_panel['Strike'] = df_panel['simbolo'].str.extract(r'(\d+)').astype(float)
+    # ... resto del código ...

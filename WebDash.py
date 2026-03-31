@@ -1,38 +1,42 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
-from SignalValidator import calculate_greeks, get_market_data
+from IOL_Connector import IOL_Client # Importamos tu conector
 
-st.set_page_config(page_title="Orion Quant - GGAL", layout="wide")
+# ... (resto del código de cabecera)
 
-st.title("🛡️ AntiGravity Quant Engine - GGAL")
+st.subheader("⛓️ Cadena de Opciones IOL (Automatizada)")
 
-# --- CONEXIÓN A LA BASE DE DATOS ---
-def load_data():
-    conn = sqlite3.connect('antigravity_data.db')
-    df = pd.read_sql_query("SELECT * FROM whale_alerts ORDER BY timestamp DESC LIMIT 50", conn)
-    conn.close()
-    return df
+# 1. Conectamos con IOL
+try:
+    iol = IOL_Client("ORD")
+    df_panel = iol.get_options_data("GGAL")
+    
+    if not df_panel.empty:
+        # 2. Identificamos Calls y Puts automáticamente
+        # Buscamos la 'C' para Calls y 'V' para Puts en el símbolo
+        df_panel['Tipo'] = df_panel['simbolo'].apply(lambda x: 'CALL 🟢' if 'C' in x[3:5] else 'PUT 🔴')
+        
+        # 3. Extraemos el Strike (Precio de Ejercicio) del nombre
+        df_panel['Strike'] = df_panel['simbolo'].str.extract('(\d+)').astype(float)
+        
+        # 4. Filtramos solo lo que tiene movimiento hoy
+        df_display = df_panel[df_panel['ultimoPrecio'] > 0][['simbolo', 'Tipo', 'Strike', 'ultimoPrecio', 'puntoMedio']]
+        
+        st.dataframe(df_display, use_container_width=True)
+    else:
+        st.warning("⚠️ No se pudo obtener el panel de IOL. Usando bases por defecto.")
+        
+except Exception as e:
+    st.error(f"Error de conexión IOL: {e}")
 
-# --- SIDEBAR: MONITOR DE GRIEGAS ---
-st.sidebar.header("⚙️ Parámetros de Opciones")
-strike = st.sidebar.number_input("Strike (Base)", value=6900)
-iv = st.sidebar.slider("Volatilidad Implícita (IV)", 0.4, 1.2, 0.85)
-
-# --- MÉTRICAS EN TIEMPO REAL ---
-ccl, p_local, tasa = get_market_data()
-delta, theta = calculate_greeks(p_local, strike, 18/365, tasa/100, iv)
-
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("GGAL Local", f"${p_local}", f"{round((p_local/6710-1)*100, 2)}%")
-col2.metric("Dólar CCL", f"${ccl}")
-col3.metric("Delta Δ (Base {strike})", delta)
-col4.metric("Theta θ (Decaimiento)", f"{theta} ARS")
-
-# --- TABLA DE DATOS (SQL) ---
-st.subheader("🐋 Historial de Ballenas y Alertas")
-data = load_data()
-st.dataframe(data, use_container_width=True)
-
-if st.button("🔄 Actualizar Datos"):
-    st.rerun()
+    # Dentro del bucle de la tabla de Streamlit:
+for index, row in df_panel.iterrows():
+    ticker = row['simbolo']
+    # Si la 4ta letra es 'C' es Call, si es 'V' es Put
+    tipo = "CALL 🟢" if ticker == 'C' else "PUT 🔴"
+    
+    # Solo calculamos griegas para lo que nos interesa (Calls de GGAL)
+    if ticker.startswith("GFCC"):
+        d, t, g, v = calc_greeks_internal(spot, row['Strike'], t_vto, 0.65, iv)
+    else:
+        d, t, g, v = 0, 0, 0, 0 # Para Puts o otros activos ponemos 0 por ahora
