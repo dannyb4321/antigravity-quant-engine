@@ -1,32 +1,34 @@
 import requests
 import pandas as pd
+from datetime import datetime
 
-class IOL_API:
+class IOL_Client:
     def __init__(self, username, password):
-        self.url_base = "https://api.invertironline.com/"
-        self.token = self.get_token(username, password)
+        self.base_url = "https://api.invertironline.com/"
+        self.username = username
+        self.password = password
+        self.access_token = self._get_token()
 
-    def get_token(self, user, pwd):
-        url = self.url_base + "token"
-        data = {"username": user, "password": pwd, "grant_type": "password"}
+    def _get_token(self):
+        url = f"{self.base_url}token"
+        data = {
+            "username": self.username,
+            "password": self.password,
+            "grant_type": "password"
+        }
         response = requests.post(url, data=data)
-        return response.json().get("access_token")
+        if response.status_code == 200:
+            return response.json().get("access_token")
+        else:
+            raise Exception("❌ Error de autenticación en IOL. Revisá tus credenciales.")
 
-    def get_options_panel(self):
-        """Trae TODAS las bases de GGAL (ITM, ATM, OTM)"""
-        url = self.url_base + "api/v2/Titulos/V2/Paneles/Opciones"
-        headers = {"Authorization": f"Bearer {self.token}"}
-        # Filtramos por GGAL en el mercado argentino
-        params = {"pais": "argentina", "instrumento": "opciones", "panel": "GGAL"}
+    def get_options_data(self, simbolo_subyacente="GGAL"):
+        """Trae el panel de opciones completo de GGAL."""
+        url = f"{self.base_url}api/v2/Titulos/V2/Paneles/Opciones"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        params = {"pais": "argentina", "instrumento": "opciones", "panel": simbolo_subyacente}
         
         response = requests.get(url, headers=headers, params=params)
-        df = pd.DataFrame(response.json()['titulos'])
-        
-        # Limpieza de Arquitecto: Nos quedamos solo con lo importante
-        df = df[['simbolo', 'ultimoPrecio', 'bidPunta', 'askPunta', 'volumen', 'puntoMedio']]
-        return df
-
-# --- USO DEL CONECTOR ---
-# iol = IOL_API("tu_usuario", "tu_password")
-# panel = iol.get_options_panel()
-# print(panel.head())
+        if response.status_code == 200:
+            return pd.DataFrame(response.json()['titulos'])
+        return pd.DataFrame()
