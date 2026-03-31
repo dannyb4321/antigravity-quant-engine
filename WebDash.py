@@ -1,42 +1,45 @@
 import streamlit as st
 import pandas as pd
-from IOL_Connector import IOL_Client # Importamos tu conector
+import sqlite3
+from IOL_Connector import IOL_Client
+from SignalValidator import calculate_greeks, get_market_data
 
-# ... (resto del código de cabecera)
+# CONFIGURACIÓN (Poné tus datos acá)
+USER_IOL = "TU_MAIL@EJEMPLO.COM"
+PASS_IOL = "TU_PASSWORD"
 
-st.subheader("⛓️ Cadena de Opciones IOL (Automatizada)")
+st.set_page_config(page_title="Orion Quant", layout="wide")
+st.title("🛡️ AntiGravity Engine - GGAL")
 
-# 1. Conectamos con IOL
-try:
-    iol = IOL_Client("ORD")
-    df_panel = iol.get_options_data("GGAL")
+# --- LÓGICA DE DATOS ---
+ccl, spot, tasa = get_market_data()
+iol = IOL_Client(USER_IOL, PASS_IOL)
+
+col1, col2 = st.columns(2)
+col1.metric("GGAL Local", f"${spot}")
+col2.metric("Dólar CCL", f"${ccl}")
+
+# --- PANEL DE OPCIONES ---
+st.subheader("⛓️ Cadena de Opciones en Tiempo Real")
+df_panel = iol.get_options_data("GGAL")
+
+if not df_panel.empty:
+    # Filtro rápido y extracción de Strike
+    df_panel = df_panel[df_panel['ultimoPrecio'] > 0].copy()
+    df_panel['Strike'] = df_panel['simbolo'].str.extract(r'(\d+)').astype(float)
     
-    if not df_panel.empty:
-        # 2. Identificamos Calls y Puts automáticamente
-        # Buscamos la 'C' para Calls y 'V' para Puts en el símbolo
-        df_panel['Tipo'] = df_panel['simbolo'].apply(lambda x: 'CALL 🟢' if 'C' in x[3:5] else 'PUT 🔴')
-        
-        # 3. Extraemos el Strike (Precio de Ejercicio) del nombre
-        df_panel['Strike'] = df_panel['simbolo'].str.extract('(\d+)').astype(float)
-        
-        # 4. Filtramos solo lo que tiene movimiento hoy
-        df_display = df_panel[df_panel['ultimoPrecio'] > 0][['simbolo', 'Tipo', 'Strike', 'ultimoPrecio', 'puntoMedio']]
-        
-        st.dataframe(df_display, use_container_width=True)
-    else:
-        st.warning("⚠️ No se pudo obtener el panel de IOL. Usando bases por defecto.")
-        
-except Exception as e:
-    st.error(f"Error de conexión IOL: {e}")
-
-    # Dentro del bucle de la tabla de Streamlit:
-for index, row in df_panel.iterrows():
-    ticker = row['simbolo']
-    # Si la 4ta letra es 'C' es Call, si es 'V' es Put
-    tipo = "CALL 🟢" if ticker == 'C' else "PUT 🔴"
+    iv = st.sidebar.slider("Volatilidad (IV)", 0.4, 1.2, 0.85)
+    t_vto = 18 / 365
     
-    # Solo calculamos griegas para lo que nos interesa (Calls de GGAL)
-    if ticker.startswith("GFCC"):
-        d, t, g, v = calc_greeks_internal(spot, row['Strike'], t_vto, 0.65, iv)
-    else:
-        d, t, g, v = 0, 0, 0, 0 # Para Puts o otros activos ponemos 0 por ahora
+    griegas = []
+    for _, row in df_panel.iterrows():
+        # Solo calculamos griegas para lo que empieza con GFC (Galicia)
+        d, t, g, v = calculate_greeks(spot, row['Strike'], t_vto, 0.65, iv)
+        griegas.append([d, t, g, v])
+    
+    df_g = pd.DataFrame(griegas, columns=['Δ Delta', 'θ Theta', 'γ Gamma', 'ν Vega'])
+    df_final = pd.concat([df_panel.reset_index(drop=True), df_g], axis=1)
+    
+    st.dataframe(df_final[['simbolo', 'ultimoPrecio', 'Strike', 'Δ Delta', 'θ Theta', 'ν Vega']], use_container_width=True)
+else:
+    st.error("❌ No se pudo conectar con IOL. Revisá tus credenciales en el código.")
